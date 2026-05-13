@@ -14,7 +14,7 @@ const INGREDIENT_FRAME: Record<IngredientType, string> = {
   flour:        'ing-flour',
   red_bean:     'ing-red-bean',
   cream_cheese: 'ing-cream-cheese',
-  choux:        'ing-custard',
+  choux:        'ing-choux',
 };
 
 export class UIScene extends Phaser.Scene {
@@ -171,7 +171,7 @@ export class UIScene extends Phaser.Scene {
     bg.fillStyle(0x3d3d5c, 1);
     bg.fillRoundedRect(-48, -55, 96, 110, 8);
 
-    const icon = this.add.image(0, -22, 'fish-sheet', MENU_FISH_FRAME[key]);
+    const icon = this.add.image(0, -22, MENU_FISH_FRAME[key]);
     icon.setDisplaySize(44, 44);
 
     const nameText = this.add.text(0, 8, def.name, {
@@ -242,7 +242,7 @@ export class UIScene extends Phaser.Scene {
     const y = 48 + index * 40;
     const row = this.add.container(width / 2, y);
 
-    const ingIcon = this.add.image(-155, 0, 'ingredient-sheet', INGREDIENT_FRAME[type]);
+    const ingIcon = this.add.image(-155, 0, INGREDIENT_FRAME[type]);
     ingIcon.setDisplaySize(28, 28);
 
     const nameTxt = this.add.text(-136, 0, def.name, {

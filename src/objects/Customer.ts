@@ -35,10 +35,9 @@ export class CustomerUI extends Phaser.GameObjects.Container {
 
   private buildVisuals(scene: Phaser.Scene): void {
     const cd = this.customerData;
-    const frameKey = `cust-${cd.def.type}`;
 
     // Real character sprite
-    this.avatarImg = scene.add.image(0, -4, 'customer-sheet', frameKey);
+    this.avatarImg = scene.add.image(0, -4, `cust-${cd.def.type}`);
     this.avatarImg.setDisplaySize(48, 70);
 
     // Expression emoji overlay
@@ -72,8 +71,7 @@ export class CustomerUI extends Phaser.GameObjects.Container {
     bubbleBg.fillStyle(0xfffff0, 0.95);
     bubbleBg.fillTriangle(8, 34, 16, 34, 10, 44);
 
-    const fishFrame = MENU_FISH_FRAME[cd.order];
-    const orderIcon = scene.add.image(17, 16, 'fish-sheet', fishFrame);
+    const orderIcon = scene.add.image(17, 16, MENU_FISH_FRAME[cd.order]);
     orderIcon.setDisplaySize(26, 26);
 
     this.orderBubble.add([bubbleBg, orderIcon]);

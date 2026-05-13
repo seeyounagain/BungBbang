@@ -11,8 +11,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.defineTextureFrames();
-    this.generateFallbackTextures();
+    this.generateMissingPlaceholders();
     this.scene.start('TitleScene');
   }
 
@@ -46,107 +45,87 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private loadAssets(): void {
-    this.load.image('mold-sheet',       'assets/mold-sheet.png');
-    this.load.image('fish-sheet',       'assets/fish-sheet.png');
-    this.load.image('customer-sheet',   'assets/customer-sheet.png');
-    this.load.image('ingredient-sheet', 'assets/ingredient-sheet.png');
-    this.load.image('order-bubbles',    'assets/order-bubbles.png');
-    this.load.image('shop-buildings',   'assets/shop-buildings.png');
-    this.load.image('shop-decor',       'assets/shop-decor.png');
-    this.load.image('ui-elements',      'assets/ui-elements.png');
+    // Mold states (place your PNG files in public/assets/)
+    this.load.image('mold-empty',    'assets/mold-empty.png');
+    this.load.image('mold-pouring',  'assets/mold-pouring.png');
+    this.load.image('mold-batter',   'assets/mold-batter.png');
+    this.load.image('mold-baking1',  'assets/mold-baking1.png');
+    this.load.image('mold-baking2',  'assets/mold-baking2.png');
+    this.load.image('mold-done',     'assets/mold-done.png');
+    this.load.image('mold-perfect',  'assets/mold-perfect.png');
+    this.load.image('mold-burnt',    'assets/mold-burnt.png');
+    this.load.image('mold-cleaning', 'assets/mold-cleaning.png');
+
+    // Menu fish icons
+    this.load.image('fish-red-bean',     'assets/fish-red-bean.png');
+    this.load.image('fish-cream-cheese', 'assets/fish-cream-cheese.png');
+    this.load.image('fish-choux',        'assets/fish-choux.png');
+
+    // Customer characters
+    this.load.image('cust-normal', 'assets/cust-normal.png');
+    this.load.image('cust-worker', 'assets/cust-worker.png');
+    this.load.image('cust-family', 'assets/cust-family.png');
+    this.load.image('cust-vip',    'assets/cust-vip.png');
+
+    // Ingredient icons
+    this.load.image('ing-flour',        'assets/ing-flour.png');
+    this.load.image('ing-red-bean',     'assets/ing-red-bean.png');
+    this.load.image('ing-cream-cheese', 'assets/ing-cream-cheese.png');
+    this.load.image('ing-choux',        'assets/ing-choux.png');
+
+    // Shop backgrounds (one per level)
+    this.load.image('shop-lv1', 'assets/shop-lv1.png');
+    this.load.image('shop-lv2', 'assets/shop-lv2.png');
+    this.load.image('shop-lv3', 'assets/shop-lv3.png');
+
+    // Title screen background
+    this.load.image('title-bg', 'assets/title-bg.png');
   }
 
-  private defineTextureFrames(): void {
-    // mold-sheet.png (1448×1086) — 5 cols, 2 mold rows + 1 bar row
-    // Each mold frame ≈ 290×435px; bars at y=870
-    const MW = 290, MH = 435;
-    const mold = this.textures.get('mold-sheet');
-    mold.add('mold-empty',    0, 0,        0,   MW, MH);
-    mold.add('mold-pouring',  0, MW,       0,   MW, MH);
-    mold.add('mold-batter',   0, MW * 2,   0,   MW, MH);
-    mold.add('mold-baking1',  0, MW * 3,   0,   MW, MH);
-    mold.add('mold-baking2',  0, MW * 4,   0,   MW, MH);
-    mold.add('mold-done',     0, 0,        MH,  MW, MH);
-    mold.add('mold-perfect',  0, MW,       MH,  MW, MH);
-    mold.add('mold-burnt',    0, MW * 2,   MH,  MW, MH);
-    mold.add('mold-cleaning', 0, MW * 3,   MH,  MW, MH);
+  // Called in create() — generates colored placeholders for any images that failed to load
+  private generateMissingPlaceholders(): void {
+    const items: Array<[string, number, number, number]> = [
+      // [key, width, height, fill-color]
+      ['mold-empty',    96, 96, 0x666677],
+      ['mold-pouring',  96, 96, 0x998844],
+      ['mold-batter',   96, 96, 0xccbb55],
+      ['mold-baking1',  96, 96, 0xcc8833],
+      ['mold-baking2',  96, 96, 0xbb6622],
+      ['mold-done',     96, 96, 0xD4A017],
+      ['mold-perfect',  96, 96, 0xFFCC00],
+      ['mold-burnt',    96, 96, 0x222222],
+      ['mold-cleaning', 96, 96, 0x778899],
+      ['fish-red-bean',     64, 64, 0xD4A017],
+      ['fish-cream-cheese', 64, 64, 0xF5DEB3],
+      ['fish-choux',        64, 64, 0xF8C471],
+      ['cust-normal', 64, 96, 0x4ecdc4],
+      ['cust-worker', 64, 96, 0x45b7d1],
+      ['cust-family', 96, 96, 0xf7dc6f],
+      ['cust-vip',    64, 96, 0xf39c12],
+      ['ing-flour',        48, 48, 0xf5f5e0],
+      ['ing-red-bean',     48, 48, 0x993333],
+      ['ing-cream-cheese', 48, 48, 0xffffcc],
+      ['ing-choux',        48, 48, 0xffdd88],
+      ['shop-lv1', 390, 280, 0x3d2b1a],
+      ['shop-lv2', 390, 280, 0x4a3020],
+      ['shop-lv3', 390, 280, 0x5a3a20],
+      ['title-bg', 390, 844, 0x1a1a2e],
+    ];
 
-    // fish-sheet.png (1254×1254) — 4 cols × 2 rows
-    // Row 1: fillings (red-bean, cream-cheese, custard, choux)
-    // Row 2: baking stages (perfect, good, under, burnt)
-    const FW = 313, FH = 627;
-    const fish = this.textures.get('fish-sheet');
-    fish.add('fish-red-bean',      0, 0,        0,   FW, FH);
-    fish.add('fish-cream-cheese',  0, FW,       0,   FW, FH);
-    fish.add('fish-custard',       0, FW * 2,   0,   FW, FH);
-    fish.add('fish-choux',         0, FW * 3,   0,   FW, FH);
-    fish.add('fish-stage-perfect', 0, 0,        FH,  FW, FH);
-    fish.add('fish-stage-good',    0, FW,       FH,  FW, FH);
-    fish.add('fish-stage-under',   0, FW * 2,   FH,  FW, FH);
-    fish.add('fish-stage-burnt',   0, FW * 3,   FH,  FW, FH);
-
-    // customer-sheet.png (1024×559) — title ~25px, fish row y=25 h=175, customers y=200
-    const CW = 204, CY = 200, CH = 359;
-    const cust = this.textures.get('customer-sheet');
-    cust.add('cust-normal', 0, 0,        CY, CW, CH);
-    cust.add('cust-worker', 0, CW,       CY, CW, CH);
-    cust.add('cust-family', 0, CW * 2,   CY, CW, CH);
-    cust.add('cust-vip',    0, CW * 3,   CY, CW, CH);
-
-    // ingredient-sheet.png (1448×1086) — 5 cols × 2 rows
-    // Row 1: flour, red_bean, cream_cheese, custard, mixed_nuts
-    // Row 2: oil/brush, coin, coin-stack, star, medal
-    const IW = 290, IH = 543;
-    const ing = this.textures.get('ingredient-sheet');
-    ing.add('ing-flour',        0, 0,        0,   IW, IH);
-    ing.add('ing-red-bean',     0, IW,       0,   IW, IH);
-    ing.add('ing-cream-cheese', 0, IW * 2,   0,   IW, IH);
-    ing.add('ing-custard',      0, IW * 3,   0,   IW, IH);
-    ing.add('ing-mixed-nuts',   0, IW * 4,   0,   IW, IH);
-    ing.add('ing-oil',          0, 0,        IH,  IW, IH);
-    ing.add('ing-coin',         0, IW,       IH,  IW, IH);
-    ing.add('ing-coin-stack',   0, IW * 2,   IH,  IW, IH);
-    ing.add('ing-star',         0, IW * 3,   IH,  IW, IH);
-    ing.add('ing-medal',        0, IW * 4,   IH,  IW, IH);
-
-    // order-bubbles.png (1448×1086) — 4 speech bubbles in row 1 (y=0, h=362)
-    const OW = 362, OH = 362;
-    const order = this.textures.get('order-bubbles');
-    order.add('bubble-red-bean',     0, 0,        0, OW, OH);
-    order.add('bubble-cream-cheese', 0, OW,       0, OW, OH);
-    order.add('bubble-custard',      0, OW * 2,   0, OW, OH);
-    order.add('bubble-choux',        0, OW * 3,   0, OW, OH);
-
-    // shop-buildings.png (1448×1086) — 5 building levels
-    const SW = 290;
-    const shopBld = this.textures.get('shop-buildings');
-    shopBld.add('shop-lv1', 0, 0,        0, SW, 1086);
-    shopBld.add('shop-lv2', 0, SW,       0, SW, 1086);
-    shopBld.add('shop-lv3', 0, SW * 2,   0, SW, 1086);
-    shopBld.add('shop-lv4', 0, SW * 3,   0, SW, 1086);
-    shopBld.add('shop-lv5', 0, SW * 4,   0, SW, 1086);
+    for (const [key, w, h, color] of items) {
+      if (!this.textures.exists(key)) {
+        this.makePlaceholder(key, w, h, color);
+      }
+    }
   }
 
-  private generateFallbackTextures(): void {
-    this.generateTexture('title-bg', 390, 844, (g) => {
-      g.fillStyle(0x1a1a2e, 1);
-      g.fillRect(0, 0, 390, 844);
-      g.fillStyle(0x4ecdc4, 0.1);
-      g.fillCircle(390, 200, 150);
-      g.fillStyle(0xf39c12, 0.08);
-      g.fillCircle(0, 600, 200);
-    });
-  }
-
-  private generateTexture(
-    key: string,
-    width: number,
-    height: number,
-    draw: (g: Phaser.GameObjects.Graphics) => void,
-  ): void {
+  private makePlaceholder(key: string, w: number, h: number, color: number): void {
     const g = this.make.graphics({ x: 0, y: 0 }, false);
-    draw(g);
-    g.generateTexture(key, width, height);
+    g.fillStyle(color, 1);
+    g.fillRoundedRect(0, 0, w, h, 6);
+    g.lineStyle(2, 0xffffff, 0.25);
+    g.strokeRoundedRect(1, 1, w - 2, h - 2, 5);
+    g.generateTexture(key, w, h);
     g.destroy();
   }
 }

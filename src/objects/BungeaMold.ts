@@ -31,7 +31,7 @@ export class BungeaMold extends Phaser.GameObjects.Container {
 
   private buildVisuals(scene: Phaser.Scene): void {
     // Single image that switches frames based on mold state
-    this.stateImage = scene.add.image(0, -6, 'mold-sheet', 'mold-empty');
+    this.stateImage = scene.add.image(0, -6, 'mold-empty');
     this.stateImage.setDisplaySize(82, 88);
 
     // Progress bar background
@@ -208,17 +208,17 @@ export class BungeaMold extends Phaser.GameObjects.Container {
 
   private updateBakingFrame(): void {
     if (this.state === MoldState.Flipped) {
-      this.stateImage.setTexture('mold-sheet', 'mold-done');
+      this.stateImage.setTexture('mold-done');
       return;
     }
     if (this.state !== MoldState.Baking) return;
     const p = this.progress;
     if (p < 0.30) {
-      this.stateImage.setTexture('mold-sheet', 'mold-batter');
+      this.stateImage.setTexture('mold-batter');
     } else if (p < 0.65) {
-      this.stateImage.setTexture('mold-sheet', 'mold-baking1');
+      this.stateImage.setTexture('mold-baking1');
     } else {
-      this.stateImage.setTexture('mold-sheet', 'mold-baking2');
+      this.stateImage.setTexture('mold-baking2');
     }
   }
 
@@ -242,12 +242,12 @@ export class BungeaMold extends Phaser.GameObjects.Container {
 
     switch (this.state) {
       case MoldState.Empty:
-        this.stateImage.setTexture('mold-sheet', 'mold-empty');
+        this.stateImage.setTexture('mold-empty');
         this.stateLabel.setText('탭하여\n시작');
         this.stateLabel.setColor('#aaaaaa');
         break;
       case MoldState.Pouring:
-        this.stateImage.setTexture('mold-sheet', 'mold-pouring');
+        this.stateImage.setTexture('mold-pouring');
         this.stateLabel.setText('반죽중...');
         this.stateLabel.setColor('#88ccff');
         break;
@@ -257,22 +257,22 @@ export class BungeaMold extends Phaser.GameObjects.Container {
         this.stateLabel.setColor('#ffee44');
         break;
       case MoldState.Flipped:
-        this.stateImage.setTexture('mold-sheet', 'mold-done');
+        this.stateImage.setTexture('mold-done');
         this.stateLabel.setText('꺼내기!');
         this.stateLabel.setColor('#44ffaa');
         break;
       case MoldState.Done:
-        this.stateImage.setTexture('mold-sheet', this.quality === 'PERFECT' ? 'mold-perfect' : 'mold-done');
+        this.stateImage.setTexture(this.quality === 'PERFECT' ? 'mold-perfect' : 'mold-done');
         this.stateLabel.setText('납품!');
         this.stateLabel.setColor('#ffdd00');
         break;
       case MoldState.Burnt:
-        this.stateImage.setTexture('mold-sheet', 'mold-burnt');
+        this.stateImage.setTexture('mold-burnt');
         this.stateLabel.setText('탄빵\n치우기');
         this.stateLabel.setColor('#ff6666');
         break;
       case MoldState.Cleaning:
-        this.stateImage.setTexture('mold-sheet', 'mold-cleaning');
+        this.stateImage.setTexture('mold-cleaning');
         this.stateLabel.setText('청소중...');
         this.stateLabel.setColor('#aaaaaa');
         break;

@@ -121,21 +121,12 @@ export class GameScene extends Phaser.Scene {
     bg.fillStyle(0x2a1f1a, 1);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Shop building — full strip image scaled to game width, anchored at bottom of play area
-    const buildingScale = GAME_WIDTH / 1448;
-    const buildingDisplayH = Math.round(1086 * buildingScale); // ≈ 292px
-    const buildingY = GAME_HEIGHT - BOTTOM_BAR - buildingDisplayH / 2 + 20;
-    const shopBg = this.add.image(GAME_WIDTH / 2, buildingY, 'shop-buildings');
-    shopBg.setScale(buildingScale);
+    // Shop building for current level, fills game width
+    const displayH = 280;
+    const buildingY = GAME_HEIGHT - BOTTOM_BAR - displayH / 2 + 20;
+    const shopBg = this.add.image(GAME_WIDTH / 2, buildingY, `shop-lv${this.shopLevel}`);
+    shopBg.setDisplaySize(GAME_WIDTH, displayH);
     shopBg.setDepth(-1);
-
-    // Highlight current level building with a subtle glow
-    const lv = this.shopLevel;
-    const glowX = (lv - 0.5) * (GAME_WIDTH / 5);
-    const glowGfx = this.add.graphics();
-    glowGfx.fillStyle(0xffdd00, 0.08);
-    glowGfx.fillRect(glowX, buildingY - buildingDisplayH / 2, GAME_WIDTH / 5, buildingDisplayH);
-    glowGfx.setDepth(-1);
 
     // Shop name label
     const shopName = UPGRADES.find(u => u.level === this.shopLevel)?.name ?? '노점';
