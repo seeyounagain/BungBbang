@@ -152,6 +152,7 @@ export class BungeaMold extends Phaser.GameObjects.Container {
   }
 
   private autoBurnt(): void {
+    if (this.state === MoldState.Burnt) return;
     this.stopProgressTween();
     this.progress = 1.0;
     this.quality = 'BURNT';
@@ -163,12 +164,14 @@ export class BungeaMold extends Phaser.GameObjects.Container {
   }
 
   forceBurnt(): void {
+    if (this.state === MoldState.Burnt || this.state === MoldState.Empty) return;
     this.stopProgressTween();
     this.cookTimer?.remove();
     this.progress = 1.0;
     this.quality = 'BURNT';
     this.state = MoldState.Burnt;
     this.updateVisuals();
+    this.events.emit('state-changed', this, MoldState.Burnt);
   }
 
   startServing(): void {

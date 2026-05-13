@@ -242,8 +242,12 @@ export class GameScene extends Phaser.Scene {
   private tryServe(mold: BungeaMold): void {
     if (!mold.currentMenu || !mold.quality) return;
 
-    // Find matching customer
-    const customer = this.spawner.customers.find(c => c.order === mold.currentMenu);
+    // Find matching customer with least patience (most urgent first)
+    const matches = this.spawner.customers.filter(c => c.order === mold.currentMenu);
+    const customer = matches.reduce<typeof matches[0] | undefined>((best, c) => {
+      if (!best) return c;
+      return this.spawner.getRemainingMs(c) < this.spawner.getRemainingMs(best) ? c : best;
+    }, undefined);
     if (!customer) {
       this.showToast('주문 손님이 없습니다');
       return;
@@ -410,7 +414,7 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Day end ─────────────────────────────────────────────────────────────
 
-  private endDay(): void {
+  private async endDay(): Promise<void> {
     if (this.dayEnded) return;
     this.dayEnded = true;
 
@@ -439,7 +443,7 @@ export class GameScene extends Phaser.Scene {
       satisfiedCount: this.economy.satisfiedCount,
     };
 
-    this.saveSystem.save(stats);
+    await this.saveSystem.save(stats);
 
     this.time.delayedCall(800, () => {
       this.scene.stop('UIScene');
