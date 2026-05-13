@@ -9,8 +9,7 @@ export class BungeaMold extends Phaser.GameObjects.Container {
   quality: BakingQuality | null = null;
   currentMenu: MenuItem | null = null;
 
-  private moldBody!: Phaser.GameObjects.Image;
-  private fishImage!: Phaser.GameObjects.Image;
+  private stateImage!: Phaser.GameObjects.Image;
   private progressBg!: Phaser.GameObjects.Graphics;
   private progressBar!: Phaser.GameObjects.Graphics;
   private stateLabel!: Phaser.GameObjects.Text;
@@ -25,38 +24,33 @@ export class BungeaMold extends Phaser.GameObjects.Container {
     this.moldId = moldId;
     this.buildVisuals(scene);
     scene.add.existing(this);
-    this.setSize(80, 90);
+    this.setSize(82, 100);
     this.setInteractive({ useHandCursor: true });
     this.on('pointerdown', this.onTap, this);
   }
 
   private buildVisuals(scene: Phaser.Scene): void {
-    // Mold background
-    this.moldBody = scene.add.image(0, 0, 'mold-empty');
-    this.moldBody.setDisplaySize(72, 72);
-
-    // Fish image (shown during baking)
-    this.fishImage = scene.add.image(0, -4, 'fish-baking');
-    this.fishImage.setDisplaySize(52, 52);
-    this.fishImage.setVisible(false);
+    // Single image that switches frames based on mold state
+    this.stateImage = scene.add.image(0, -6, 'mold-sheet', 'mold-empty');
+    this.stateImage.setDisplaySize(82, 88);
 
     // Progress bar background
     this.progressBg = scene.add.graphics();
-    this.progressBg.fillStyle(0x333333, 0.8);
-    this.progressBg.fillRect(-30, 36, 60, 8);
+    this.progressBg.fillStyle(0x000000, 0.5);
+    this.progressBg.fillRoundedRect(-28, 38, 56, 8, 3);
 
     // Progress bar fill
     this.progressBar = scene.add.graphics();
 
-    // State label
-    this.stateLabel = scene.add.text(0, 28, '', {
+    // State label (below image)
+    this.stateLabel = scene.add.text(0, 50, '', {
       fontSize: '9px',
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 2,
     }).setOrigin(0.5, 0);
 
-    this.add([this.moldBody, this.fishImage, this.progressBg, this.progressBar, this.stateLabel]);
+    this.add([this.stateImage, this.progressBg, this.progressBar, this.stateLabel]);
     this.updateVisuals();
   }
 
@@ -105,7 +99,7 @@ export class BungeaMold extends Phaser.GameObjects.Container {
       duration: BAKING.totalDuration,
       onUpdate: (tween) => {
         this.progress = tween.getValue() ?? 0;
-        this.updateColorTint();
+        this.updateBakingFrame();
         this.updateProgressBar();
         if (this.progress >= 1.0 && this.state === MoldState.Baking) {
           this.autoBurnt();
@@ -141,7 +135,7 @@ export class BungeaMold extends Phaser.GameObjects.Container {
     else if (p >= z.good_early.min && p < z.good_early.max) quality = 'GOOD';
     else if (p >= z.good_late.min  && p < z.good_late.max)  quality = 'GOOD';
     else if (p < z.under.max)                                quality = 'UNDER';
-    else                                                      quality = 'BURNT';
+    else                                                     quality = 'BURNT';
 
     this.quality = quality;
     this.transitionTo(MoldState.Flipped);
@@ -212,16 +206,20 @@ export class BungeaMold extends Phaser.GameObjects.Container {
     }
   }
 
-  private updateColorTint(): void {
-    if (!this.fishImage.visible) return;
-    const p = this.progress;
-    for (const { maxProgress, tint } of BAKING.colorTint) {
-      if (p <= maxProgress) {
-        this.fishImage.setTint(tint);
-        return;
-      }
+  private updateBakingFrame(): void {
+    if (this.state === MoldState.Flipped) {
+      this.stateImage.setTexture('mold-sheet', 'mold-done');
+      return;
     }
-    this.fishImage.setTint(BAKING.colorTint[BAKING.colorTint.length - 1].tint);
+    if (this.state !== MoldState.Baking) return;
+    const p = this.progress;
+    if (p < 0.30) {
+      this.stateImage.setTexture('mold-sheet', 'mold-batter');
+    } else if (p < 0.65) {
+      this.stateImage.setTexture('mold-sheet', 'mold-baking1');
+    } else {
+      this.stateImage.setTexture('mold-sheet', 'mold-baking2');
+    }
   }
 
   private updateProgressBar(): void {
@@ -234,48 +232,52 @@ export class BungeaMold extends Phaser.GameObjects.Container {
     else if (p >= 0.95) color = 0xff4444;
 
     this.progressBar.fillStyle(color, 1);
-    this.progressBar.fillRect(-30, 36, 60 * p, 8);
+    this.progressBar.fillRoundedRect(-28, 38, 56 * p, 8, 3);
   }
 
   private updateVisuals(): void {
     const isBaking = this.state === MoldState.Baking || this.state === MoldState.Flipped;
-    const isDone = this.state === MoldState.Done;
-    const isBurnt = this.state === MoldState.Burnt;
-    const isPouring = this.state === MoldState.Pouring;
-    const isEmpty = this.state === MoldState.Empty;
-
-    this.fishImage.setVisible(!isEmpty);
     this.progressBg.setVisible(isBaking);
     this.progressBar.setVisible(isBaking);
 
-    if (isEmpty) {
-      this.moldBody.setTexture('mold-empty');
-      this.stateLabel.setText('탭하여\n시작');
-      this.stateLabel.setColor('#aaaaaa');
-    } else if (isPouring) {
-      this.moldBody.setTexture('mold-baking');
-      this.fishImage.setTint(0xFFFFFF);
-      this.stateLabel.setText('반죽중...');
-      this.stateLabel.setColor('#88ccff');
-    } else if (isBaking) {
-      this.moldBody.setTexture('mold-baking');
-      const label = this.state === MoldState.Flipped ? '꺼내기!' : '뒤집기!';
-      this.stateLabel.setText(label);
-      this.stateLabel.setColor('#ffffff');
-      this.updateColorTint();
-      this.updateProgressBar();
-    } else if (isDone) {
-      this.moldBody.setTexture('mold-done');
-      this.fishImage.setTint(BAKING.colorTint[2].tint);
-      this.stateLabel.setText('납품!');
-      this.stateLabel.setColor('#ffdd00');
-    } else if (isBurnt) {
-      this.moldBody.setTexture('mold-burnt');
-      this.fishImage.setTint(BAKING.colorTint[4].tint);
-      this.stateLabel.setText('탄빵\n치우기');
-      this.stateLabel.setColor('#ff6666');
-    } else {
-      this.stateLabel.setText('');
+    switch (this.state) {
+      case MoldState.Empty:
+        this.stateImage.setTexture('mold-sheet', 'mold-empty');
+        this.stateLabel.setText('탭하여\n시작');
+        this.stateLabel.setColor('#aaaaaa');
+        break;
+      case MoldState.Pouring:
+        this.stateImage.setTexture('mold-sheet', 'mold-pouring');
+        this.stateLabel.setText('반죽중...');
+        this.stateLabel.setColor('#88ccff');
+        break;
+      case MoldState.Baking:
+        this.updateBakingFrame();
+        this.stateLabel.setText('뒤집기!');
+        this.stateLabel.setColor('#ffee44');
+        break;
+      case MoldState.Flipped:
+        this.stateImage.setTexture('mold-sheet', 'mold-done');
+        this.stateLabel.setText('꺼내기!');
+        this.stateLabel.setColor('#44ffaa');
+        break;
+      case MoldState.Done:
+        this.stateImage.setTexture('mold-sheet', this.quality === 'PERFECT' ? 'mold-perfect' : 'mold-done');
+        this.stateLabel.setText('납품!');
+        this.stateLabel.setColor('#ffdd00');
+        break;
+      case MoldState.Burnt:
+        this.stateImage.setTexture('mold-sheet', 'mold-burnt');
+        this.stateLabel.setText('탄빵\n치우기');
+        this.stateLabel.setColor('#ff6666');
+        break;
+      case MoldState.Cleaning:
+        this.stateImage.setTexture('mold-sheet', 'mold-cleaning');
+        this.stateLabel.setText('청소중...');
+        this.stateLabel.setColor('#aaaaaa');
+        break;
+      default:
+        this.stateLabel.setText('');
     }
   }
 }

@@ -4,6 +4,19 @@ import { UPGRADES } from '../data/balance';
 import { INGREDIENT_DEFS, type IngredientType } from '../data/ingredients';
 import { MENU_DEFS, type MenuItem } from '../data/menu';
 
+const MENU_FISH_FRAME: Record<MenuItem, string> = {
+  red_bean:     'fish-red-bean',
+  cream_cheese: 'fish-cream-cheese',
+  choux:        'fish-choux',
+};
+
+const INGREDIENT_FRAME: Record<IngredientType, string> = {
+  flour:        'ing-flour',
+  red_bean:     'ing-red-bean',
+  cream_cheese: 'ing-cream-cheese',
+  choux:        'ing-custard',
+};
+
 export class UIScene extends Phaser.Scene {
   private goldText!: Phaser.GameObjects.Text;
   private timerBar!: Phaser.GameObjects.Graphics;
@@ -158,8 +171,8 @@ export class UIScene extends Phaser.Scene {
     bg.fillStyle(0x3d3d5c, 1);
     bg.fillRoundedRect(-48, -55, 96, 110, 8);
 
-    const icon = this.add.image(0, -20, `menu-${key}`);
-    icon.setDisplaySize(40, 40);
+    const icon = this.add.image(0, -22, 'fish-sheet', MENU_FISH_FRAME[key]);
+    icon.setDisplaySize(44, 44);
 
     const nameText = this.add.text(0, 8, def.name, {
       fontSize: '9px',
@@ -229,8 +242,11 @@ export class UIScene extends Phaser.Scene {
     const y = 48 + index * 40;
     const row = this.add.container(width / 2, y);
 
-    const nameTxt = this.add.text(-150, 0, def.name, {
-      fontSize: '14px',
+    const ingIcon = this.add.image(-155, 0, 'ingredient-sheet', INGREDIENT_FRAME[type]);
+    ingIcon.setDisplaySize(28, 28);
+
+    const nameTxt = this.add.text(-136, 0, def.name, {
+      fontSize: '13px',
       color: '#ffffff',
     }).setOrigin(0, 0.5);
 
@@ -259,7 +275,7 @@ export class UIScene extends Phaser.Scene {
       gameScene.events.emit('buy-ingredient', type);
     });
 
-    row.add([nameTxt, stockTxt, btnContainer]);
+    row.add([ingIcon, nameTxt, stockTxt, btnContainer]);
     row.setData('stockTxt', stockTxt);
     row.setData('type', type);
 

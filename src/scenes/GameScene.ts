@@ -116,24 +116,37 @@ export class GameScene extends Phaser.Scene {
   // ─── Background ──────────────────────────────────────────────────────────
 
   private buildBackground(): void {
+    // Dark base
     const bg = this.add.graphics();
-    bg.fillStyle(0x1a1a2e, 1);
+    bg.fillStyle(0x2a1f1a, 1);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Street background
-    bg.fillStyle(0x2d2d3e, 1);
-    bg.fillRect(0, HUD_HEIGHT, GAME_WIDTH, GAME_HEIGHT - HUD_HEIGHT - BOTTOM_BAR);
+    // Shop building — full strip image scaled to game width, anchored at bottom of play area
+    const buildingScale = GAME_WIDTH / 1448;
+    const buildingDisplayH = Math.round(1086 * buildingScale); // ≈ 292px
+    const buildingY = GAME_HEIGHT - BOTTOM_BAR - buildingDisplayH / 2 + 20;
+    const shopBg = this.add.image(GAME_WIDTH / 2, buildingY, 'shop-buildings');
+    shopBg.setScale(buildingScale);
+    shopBg.setDepth(-1);
 
-    // Decorative shop sign
-    const sign = this.add.graphics();
-    sign.fillStyle(0x8B4513, 1);
-    sign.fillRoundedRect(GAME_WIDTH / 2 - 80, HUD_HEIGHT + 8, 160, 34, 6);
-    sign.lineStyle(2, 0xD4A017, 1);
-    sign.strokeRoundedRect(GAME_WIDTH / 2 - 80, HUD_HEIGHT + 8, 160, 34, 6);
+    // Highlight current level building with a subtle glow
+    const lv = this.shopLevel;
+    const glowX = (lv - 0.5) * (GAME_WIDTH / 5);
+    const glowGfx = this.add.graphics();
+    glowGfx.fillStyle(0xffdd00, 0.08);
+    glowGfx.fillRect(glowX, buildingY - buildingDisplayH / 2, GAME_WIDTH / 5, buildingDisplayH);
+    glowGfx.setDepth(-1);
 
+    // Shop name label
     const shopName = UPGRADES.find(u => u.level === this.shopLevel)?.name ?? '노점';
-    this.add.text(GAME_WIDTH / 2, HUD_HEIGHT + 25, `🐟 ${shopName}`, {
-      fontSize: '15px',
+    const nameBg = this.add.graphics();
+    nameBg.fillStyle(0x4a2c0a, 0.85);
+    nameBg.fillRoundedRect(GAME_WIDTH / 2 - 80, HUD_HEIGHT + 8, 160, 30, 6);
+    nameBg.lineStyle(2, 0xD4A017, 0.9);
+    nameBg.strokeRoundedRect(GAME_WIDTH / 2 - 80, HUD_HEIGHT + 8, 160, 30, 6);
+
+    this.add.text(GAME_WIDTH / 2, HUD_HEIGHT + 23, `🐟 ${shopName}`, {
+      fontSize: '14px',
       fontStyle: 'bold',
       color: '#ffdd00',
     }).setOrigin(0.5);

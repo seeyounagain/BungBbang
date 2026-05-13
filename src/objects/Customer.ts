@@ -1,9 +1,16 @@
 import Phaser from 'phaser';
 import type { SpawnedCustomer } from '../systems/CustomerSpawnerSystem';
 import type { CustomerSpawnerSystem } from '../systems/CustomerSpawnerSystem';
+import type { MenuItem } from '../data/menu';
+
+const MENU_FISH_FRAME: Record<MenuItem, string> = {
+  red_bean:     'fish-red-bean',
+  cream_cheese: 'fish-cream-cheese',
+  choux:        'fish-choux',
+};
 
 export class CustomerUI extends Phaser.GameObjects.Container {
-  private portrait!: Phaser.GameObjects.Graphics;
+  private avatarImg!: Phaser.GameObjects.Image;
   private patienceBarBg!: Phaser.GameObjects.Graphics;
   private patienceBarFill!: Phaser.GameObjects.Graphics;
   private orderBubble!: Phaser.GameObjects.Container;
@@ -27,55 +34,53 @@ export class CustomerUI extends Phaser.GameObjects.Container {
   }
 
   private buildVisuals(scene: Phaser.Scene): void {
-    const def = this.customerData.def;
+    const cd = this.customerData;
+    const frameKey = `cust-${cd.def.type}`;
 
-    // Portrait background circle
-    const bg = scene.add.graphics();
-    bg.fillStyle(def.color, 1);
-    bg.fillCircle(0, 0, 24);
+    // Real character sprite
+    this.avatarImg = scene.add.image(0, -4, 'customer-sheet', frameKey);
+    this.avatarImg.setDisplaySize(48, 70);
 
-    // Portrait shape
-    this.portrait = scene.add.graphics();
-    this.portrait.fillStyle(0xffffff, 0.9);
-    this.portrait.fillCircle(0, -5, 12);
-    this.portrait.fillEllipse(0, 14, 22, 14);
-
-    // Expression
-    this.expressionLabel = scene.add.text(14, -18, '😊', {
+    // Expression emoji overlay
+    this.expressionLabel = scene.add.text(20, -36, '😊', {
       fontSize: '12px',
     }).setOrigin(0.5);
 
-    // Patience bar background
+    // Patience bar
     this.patienceBarBg = scene.add.graphics();
-    this.patienceBarBg.fillStyle(0x333333, 0.8);
-    this.patienceBarBg.fillRect(-25, 28, 50, 7);
+    this.patienceBarBg.fillStyle(0x000000, 0.6);
+    this.patienceBarBg.fillRoundedRect(-25, 32, 50, 7, 2);
 
-    // Patience bar fill
     this.patienceBarFill = scene.add.graphics();
 
     // Name label
-    const nameLabel = scene.add.text(0, 38, def.name, {
+    const nameLabel = scene.add.text(0, 42, cd.def.name, {
       fontSize: '8px',
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 2,
     }).setOrigin(0.5, 0);
 
-    // Order bubble
-    this.orderBubble = scene.add.container(-30, -44);
+    // Order speech bubble
+    this.orderBubble = scene.add.container(-28, -58);
     const bubbleBg = scene.add.graphics();
-    bubbleBg.fillStyle(0xffffff, 0.95);
-    bubbleBg.fillRoundedRect(0, 0, 28, 28, 6);
-    bubbleBg.lineStyle(2, 0x333333, 1);
-    bubbleBg.strokeRoundedRect(0, 0, 28, 28, 6);
-    const orderIcon = scene.add.image(14, 14, `menu-${this.customerData.order}`);
-    orderIcon.setDisplaySize(22, 22);
+    bubbleBg.fillStyle(0xfffff0, 0.95);
+    bubbleBg.fillRoundedRect(0, 0, 34, 34, 7);
+    bubbleBg.lineStyle(2, 0x886644, 1);
+    bubbleBg.strokeRoundedRect(0, 0, 34, 34, 7);
+    // Speech tail
+    bubbleBg.fillStyle(0xfffff0, 0.95);
+    bubbleBg.fillTriangle(8, 34, 16, 34, 10, 44);
+
+    const fishFrame = MENU_FISH_FRAME[cd.order];
+    const orderIcon = scene.add.image(17, 16, 'fish-sheet', fishFrame);
+    orderIcon.setDisplaySize(26, 26);
+
     this.orderBubble.add([bubbleBg, orderIcon]);
 
-    this.add([bg, this.portrait, this.expressionLabel, this.patienceBarBg, this.patienceBarFill, nameLabel, this.orderBubble]);
+    this.add([this.avatarImg, this.expressionLabel, this.patienceBarBg, this.patienceBarFill, nameLabel, this.orderBubble]);
 
-    // VIP: hide patience bar
-    if (this.customerData.type === 'vip') {
+    if (cd.type === 'vip') {
       this.patienceBarBg.setVisible(false);
       this.patienceBarFill.setVisible(false);
     }
@@ -96,7 +101,7 @@ export class CustomerUI extends Phaser.GameObjects.Container {
     this.patienceBarFill.clear();
     const color = ratio > 0.6 ? 0x44cc44 : ratio > 0.3 ? 0xffcc00 : 0xff3333;
     this.patienceBarFill.fillStyle(color, 1);
-    this.patienceBarFill.fillRect(-25, 28, 50 * ratio, 7);
+    this.patienceBarFill.fillRoundedRect(-25, 32, 50 * ratio, 7, 2);
   }
 
   private updateExpression(ratio: number): void {
