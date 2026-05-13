@@ -1,0 +1,17 @@
+{
+  "active": false,
+  "current_phase": "completed",
+  "plan_path": ".omc/specs/deep-interview-bungeo-tycoon.md",
+  "completed_at": "2026-05-13T07:15:00Z",
+  "interview_id": "bungeo-tycoon-2026-0513",
+  "final_ambiguity": 0.19,
+  "rounds_completed": 13,
+  "spec_path": ".omc/specs/deep-interview-bungeo-tycoon.md",
+  "status": "PASSED",
+  "_meta": {
+    "mode": "deep-interview",
+    "sessionId": null,
+    "updatedAt": "2026-05-13T07:10:36.534Z",
+    "updatedBy": "state_write_tool"
+  }
+}

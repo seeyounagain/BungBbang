@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"D:\\\\SIYOON\\\\WORKSPACE\\\\ETC\\\\Play\\\\BPT\\\" && Move-Item -Path \\\"public\\\\index.html\\\" -Destination \\\"index.html\\\" 2>&1\",\"description\":\"Move index.html from public/ to project root\"}",
+  "error": "Exit code 127\n/usr/bin/bash: line 1: Move-Item: command not found",
+  "timestamp": "2026-05-13T09:08:31.920Z",
+  "retry_count": 2
+}
