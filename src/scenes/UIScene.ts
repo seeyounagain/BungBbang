@@ -13,6 +13,7 @@ export class UIScene extends Phaser.Scene {
   private bottomPanel!: Phaser.GameObjects.Container;
   private menuPanel!: Phaser.GameObjects.Container;
   private shopPanel!: Phaser.GameObjects.Container;
+  private closeZone!: Phaser.GameObjects.Zone;
   private activePanel: 'menu' | 'shop' | null = null;
   private menuButtons: Map<MenuItem, Phaser.GameObjects.Container> = new Map();
 
@@ -142,10 +143,11 @@ export class UIScene extends Phaser.Scene {
       this.menuPanel.add(btn);
     });
 
-    // Close tap outside
-    const closeZone = this.add.zone(0, 0, width, height).setOrigin(0).setDepth(9);
-    closeZone.setInteractive();
-    closeZone.on('pointerdown', () => this.hideAllPanels());
+    // Close tap outside — disabled by default, enabled only when a panel is open
+    this.closeZone = this.add.zone(0, 0, width, height).setOrigin(0).setDepth(9);
+    this.closeZone.setInteractive();
+    this.closeZone.disableInteractive();
+    this.closeZone.on('pointerdown', () => this.hideAllPanels());
   }
 
   private buildMenuButton(key: MenuItem, x: number, y: number): Phaser.GameObjects.Container {
@@ -273,12 +275,14 @@ export class UIScene extends Phaser.Scene {
     this.activePanel = panel;
     if (panel === 'menu') this.menuPanel.setVisible(true);
     if (panel === 'shop') this.shopPanel.setVisible(true);
+    this.closeZone.setInteractive();
   }
 
   private hideAllPanels(): void {
     this.activePanel = null;
     this.menuPanel.setVisible(false);
     this.shopPanel.setVisible(false);
+    this.closeZone.disableInteractive();
   }
 
   private subscribeToGameEvents(): void {
