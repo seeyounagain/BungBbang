@@ -35,3 +35,9 @@ export const MAX_QUEUE_SIZE = 5;
 export const POURING_DURATION_MS = 500;
 export const CLEANING_DURATION_MS = 300;
 export const SERVING_DURATION_MS = 300;
+
+export const SHELF = {
+  initialCapacity: 2,
+  maxCapacity: 6,
+  upgradeCosts: [300, 600, 1_000, 1_500], // 3칸→4→5→6칸 잠금 해제 비용
+} as const;

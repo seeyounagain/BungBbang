@@ -9,8 +9,8 @@ import { AudioGateway } from '../systems/AudioGateway';
 import { SaveSystem } from '../systems/storage/SaveSystem';
 import { LocalStorageAdapter } from '../systems/storage/LocalStorageAdapter';
 import { MoldState } from '../data/types';
-import { UPGRADES } from '../data/balance';
-import { DAY } from '../data/balance';
+import { UPGRADES, DAY, SHELF } from '../data/balance';
+import type { BakingQuality } from '../data/types';
 import type { DayStats } from '../data/types';
 import { MENU_DEFS, type MenuItem } from '../data/menu';
 import type { IngredientType } from '../data/ingredients';
@@ -21,6 +21,9 @@ const GAME_WIDTH  = 390;
 const GAME_HEIGHT = 844;
 const HUD_HEIGHT  = 58;
 const BOTTOM_BAR  = 56;
+const SHELF_Y     = 500;
+const SHELF_SLOT_W = 52;
+const SHELF_SLOT_H = 58;
 
 export class GameScene extends Phaser.Scene {
   // Systems
@@ -43,6 +46,11 @@ export class GameScene extends Phaser.Scene {
   private fillingPanel: Phaser.GameObjects.Container | null = null;
   private activeFillMold: BungeaMold | null = null;
 
+  // Shelf
+  private shelfCapacity: number = SHELF.initialCapacity;
+  private shelfItems: ({ menu: MenuItem; quality: BakingQuality } | null)[] = [];
+  private shelfSlotContainers: Phaser.GameObjects.Container[] = [];
+
   // Queue display
   private queueSlots: { x: number; y: number }[] = [];
 
@@ -53,14 +61,17 @@ export class GameScene extends Phaser.Scene {
   init(data: { save?: DayStats }): void {
     if (data?.save) {
       const s = data.save;
-      this.dayNumber  = s.dayNumber;
-      this.shopLevel  = Math.min(3, Math.max(1, s.shopLevel)) as 1 | 2 | 3;
-      this.economy    = new EconomySystem(s.gold, s.stock as Record<IngredientType, number>);
+      this.dayNumber     = s.dayNumber;
+      this.shopLevel     = Math.min(3, Math.max(1, s.shopLevel)) as 1 | 2 | 3;
+      this.shelfCapacity = Math.min(SHELF.maxCapacity, Math.max(SHELF.initialCapacity, s.shelfCapacity ?? SHELF.initialCapacity));
+      this.economy       = new EconomySystem(s.gold, s.stock as Record<IngredientType, number>);
     } else {
-      this.dayNumber  = 1;
-      this.shopLevel  = 1;
-      this.economy    = new EconomySystem(300);
+      this.dayNumber     = 1;
+      this.shopLevel     = 1;
+      this.shelfCapacity = SHELF.initialCapacity;
+      this.economy       = new EconomySystem(300);
     }
+    this.shelfItems = new Array(SHELF.maxCapacity).fill(null);
   }
 
   create(): void {
@@ -76,6 +87,7 @@ export class GameScene extends Phaser.Scene {
     this.buildBackground();
     this.buildQueueArea();
     this.buildMoldGrid();
+    this.buildShelf();
     this.buildUpgradeButton();
     this.wireEconomyEvents();
     this.wireUpgradeEvents();
@@ -208,8 +220,8 @@ export class GameScene extends Phaser.Scene {
       this.showFillingPanel(m);
     });
 
-    mold.events.on('request-serve', (m: BungeaMold) => {
-      this.tryServe(m);
+    mold.events.on('request-shelf', (m: BungeaMold) => {
+      this.tryPutOnShelf(m);
     });
 
     mold.events.on('flipped', (_m: BungeaMold, quality: string) => {
@@ -370,8 +382,119 @@ export class GameScene extends Phaser.Scene {
     this.hideFillingPanel();
   }
 
-  private tryServe(mold: BungeaMold): void {
+  // ─── Shelf ────────────────────────────────────────────────────────────────
+
+  private buildShelf(): void {
+    const gap    = 5;
+    const total  = SHELF.maxCapacity * SHELF_SLOT_W + (SHELF.maxCapacity - 1) * gap;
+    const startX = (GAME_WIDTH - total) / 2;
+
+    this.add.text(GAME_WIDTH / 2, SHELF_Y - 22, '🐟 진열대', {
+      fontSize: '11px',
+      color: '#777799',
+    }).setOrigin(0.5);
+
+    this.shelfSlotContainers = [];
+    for (let i = 0; i < SHELF.maxCapacity; i++) {
+      const cx = startX + i * (SHELF_SLOT_W + gap) + SHELF_SLOT_W / 2;
+      const slot = this.add.container(cx, SHELF_Y + SHELF_SLOT_H / 2);
+      slot.setDepth(5);
+      this.shelfSlotContainers.push(slot);
+      this.refreshShelfSlot(i);
+    }
+  }
+
+  private refreshShelfSlot(index: number): void {
+    const container = this.shelfSlotContainers[index];
+    if (!container) return;
+
+    container.each((child: Phaser.GameObjects.GameObject) => child.destroy());
+    container.removeAll(false);
+    container.removeInteractive();
+    container.removeAllListeners();
+
+    const hw = SHELF_SLOT_W / 2;
+    const hh = SHELF_SLOT_H / 2;
+    const locked = index >= this.shelfCapacity;
+    const item   = this.shelfItems[index] ?? null;
+    const bg     = this.add.graphics();
+
+    if (locked) {
+      bg.fillStyle(0x1a1a2e, 1);
+      bg.fillRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+      bg.lineStyle(1, 0x2a2a44, 1);
+      bg.strokeRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+
+      const costIdx = index - SHELF.initialCapacity;
+      const cost    = SHELF.upgradeCosts[costIdx] ?? 0;
+      const lck     = this.add.text(0, -8, '🔒', { fontSize: '14px' }).setOrigin(0.5);
+      const cst     = this.add.text(0, 12, `${cost}G`, { fontSize: '8px', color: '#555577' }).setOrigin(0.5);
+
+      container.add([bg, lck, cst]);
+      container.setSize(SHELF_SLOT_W, SHELF_SLOT_H);
+      container.setInteractive({ useHandCursor: true });
+      container.on('pointerdown', () => this.tryUpgradeShelf(index));
+
+    } else if (item) {
+      const borderColor = item.quality === 'PERFECT' ? 0xffdd00 : item.quality === 'UNDER' ? 0x666666 : 0x4ecdc4;
+      bg.fillStyle(0x2d2d44, 1);
+      bg.fillRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+      bg.lineStyle(2, borderColor, 1);
+      bg.strokeRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+
+      const FISH_ICON: Record<MenuItem, string> = {
+        red_bean: 'fish-red-bean', cream_cheese: 'fish-cream-cheese', choux: 'fish-choux',
+      };
+      const icon = this.add.image(0, -6, FISH_ICON[item.menu]);
+      icon.setDisplaySize(32, 32);
+      const qLabel = item.quality === 'PERFECT' ? '✨' : item.quality === 'UNDER' ? '△' : '';
+      const qTxt   = this.add.text(0, 20, qLabel, { fontSize: '9px', color: '#ffdd88' }).setOrigin(0.5);
+
+      container.add([bg, icon, qTxt]);
+      container.setSize(SHELF_SLOT_W, SHELF_SLOT_H);
+      container.setInteractive({ useHandCursor: true });
+      container.on('pointerdown', () => this.tryServeFromShelf(index));
+      container.on('pointerover', () => {
+        bg.clear();
+        bg.fillStyle(0x3d3d5c, 1);
+        bg.fillRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+        bg.lineStyle(2, borderColor, 1);
+        bg.strokeRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+      });
+      container.on('pointerout', () => {
+        bg.clear();
+        bg.fillStyle(0x2d2d44, 1);
+        bg.fillRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+        bg.lineStyle(2, borderColor, 1);
+        bg.strokeRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+      });
+
+    } else {
+      bg.fillStyle(0x252538, 0.7);
+      bg.fillRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+      bg.lineStyle(1, 0x444466, 0.5);
+      bg.strokeRoundedRect(-hw, -hh, SHELF_SLOT_W, SHELF_SLOT_H, 6);
+      container.add([bg]);
+    }
+  }
+
+  private tryPutOnShelf(mold: BungeaMold): void {
     if (!mold.currentMenu || !mold.quality) return;
+
+    const emptyIdx = this.shelfItems.findIndex((s, i) => i < this.shelfCapacity && s === null);
+    if (emptyIdx === -1) {
+      this.showToast('진열대가 가득 찼습니다!');
+      return;
+    }
+
+    this.shelfItems[emptyIdx] = { menu: mold.currentMenu, quality: mold.quality };
+    mold.startServing();
+    this.refreshShelfSlot(emptyIdx);
+  }
+
+  private tryServeFromShelf(index: number): void {
+    const item = this.shelfItems[index];
+    if (!item) return;
 
     const allCustomers = [...this.spawner.customers];
     if (allCustomers.length === 0) {
@@ -379,40 +502,55 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Find matching customer (correct order) with least patience
-    const matches = allCustomers.filter(c => c.order === mold.currentMenu);
-    const correctCustomer = matches.reduce<typeof matches[0] | undefined>((best, c) => {
-      if (!best) return c;
-      return this.spawner.getRemainingMs(c) < this.spawner.getRemainingMs(best) ? c : best;
-    }, undefined);
-
-    if (correctCustomer) {
-      // ── Happy path: correct filling ──────────────────────────────
-      const served = this.spawner.serveCustomer(correctCustomer.id, mold.currentMenu);
-      if (!served) return;
-
-      const earned = this.economy.sell(mold.currentMenu, mold.quality, served.def);
-      mold.startServing();
-
-      this.effects.showGoldEarned(mold.x, mold.y - 30, earned);
-      this.effects.showHeart(mold.x + 30, mold.y - 20);
-      this.audio.play('customer_happy');
-      this.removeCustomerUI(correctCustomer.id, false);
-    } else {
-      // ── Wrong filling: give to most urgent customer, 0원 + penalty ──
-      const mostUrgent = allCustomers.reduce((best, c) =>
-        this.spawner.getRemainingMs(c) < this.spawner.getRemainingMs(best) ? c : best,
-      );
-
-      this.spawner.removeCustomer(mostUrgent.id);
-      this.economy.decreaseReputation(mostUrgent.def.reputationOnFail);
-      mold.forceBurnt();
-
-      this.showToast('잘못된 소! 판매 실패');
-      this.effects.showAngry(mold.x, mold.y - 30);
-      this.audio.play('customer_angry');
-      this.removeCustomerUI(mostUrgent.id, true);
+    const matches = allCustomers.filter(c => c.order === item.menu);
+    if (matches.length === 0) {
+      this.showToast('해당 주문 손님이 없습니다');
+      return;
     }
+
+    const customer = matches.reduce((best, c) =>
+      this.spawner.getRemainingMs(c) < this.spawner.getRemainingMs(best) ? c : best,
+    );
+    const served = this.spawner.serveCustomer(customer.id, item.menu);
+    if (!served) return;
+
+    const earned = this.economy.sell(item.menu, item.quality, served.def);
+    this.shelfItems[index] = null;
+    this.refreshShelfSlot(index);
+
+    const sx = this.shelfSlotContainers[index].x;
+    const sy = this.shelfSlotContainers[index].y;
+    this.effects.showGoldEarned(sx, sy - 30, earned);
+    this.effects.showHeart(sx + 20, sy - 20);
+    this.audio.play('customer_happy');
+
+    const fullyServed = served.quantityServed >= served.quantity;
+    if (fullyServed) {
+      this.removeCustomerUI(customer.id, false);
+    } else {
+      const ui = this.customerUIs.get(customer.id);
+      if (ui) ui.updateQuantity(served.quantity - served.quantityServed);
+    }
+  }
+
+  private tryUpgradeShelf(index: number): void {
+    if (index !== this.shelfCapacity || this.shelfCapacity >= SHELF.maxCapacity) return;
+
+    const costIdx = this.shelfCapacity - SHELF.initialCapacity;
+    const cost    = SHELF.upgradeCosts[costIdx];
+    if (cost === undefined) return;
+
+    if (this.economy.gold < cost) {
+      this.showToast(`진열대 확장 비용: ${cost}G`);
+      return;
+    }
+
+    this.economy.gold -= cost;
+    this.events.emit('gold-changed', this.economy.gold);
+    this.shelfCapacity++;
+
+    for (let i = 0; i < SHELF.maxCapacity; i++) this.refreshShelfSlot(i);
+    this.showToast(`진열대 ${this.shelfCapacity}칸으로 확장!`);
   }
 
   private removeCustomerUI(id: string, angry: boolean): void {
@@ -575,11 +713,15 @@ export class GameScene extends Phaser.Scene {
     this.customerUIs.forEach(ui => ui.destroy());
     this.customerUIs.clear();
 
+    // Unsold shelf items count as wasted
+    this.shelfItems.forEach(item => { if (item) this.economy.wastedCount++; });
+
     const stats: DayStats = {
       version: 'v1',
       dayNumber: this.dayNumber,
       gold: this.economy.gold,
       shopLevel: this.shopLevel,
+      shelfCapacity: this.shelfCapacity,
       stock: { ...this.economy.stock },
       totalSold: this.economy.totalSold,
       revenue: this.economy.revenue,

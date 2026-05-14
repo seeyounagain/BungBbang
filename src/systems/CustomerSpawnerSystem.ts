@@ -1,5 +1,5 @@
 import { SPAWN_INTERVAL_MS, MAX_QUEUE_SIZE } from '../data/balance';
-import { pickRandomCustomerType, CUSTOMER_DEFS } from '../data/customers';
+import { pickRandomCustomerType, pickQuantity, CUSTOMER_DEFS } from '../data/customers';
 import { MENU_DEFS } from '../data/menu';
 import type { MenuItem } from '../data/menu';
 import type { EconomySystem } from './EconomySystem';
@@ -8,6 +8,8 @@ export interface SpawnedCustomer {
   id: string;
   type: import('../data/types').CustomerType;
   order: MenuItem;
+  quantity: number;
+  quantityServed: number;
   startedAt: number;
   def: (typeof CUSTOMER_DEFS)[keyof typeof CUSTOMER_DEFS];
 }
@@ -24,8 +26,11 @@ export class CustomerSpawnerSystem {
   }
 
   update(shopLevel: 1 | 2 | 3): SpawnedCustomer[] {
-    const now = Date.now();
-    const interval = SPAWN_INTERVAL_MS[shopLevel];
+    const now      = Date.now();
+    const base     = SPAWN_INTERVAL_MS[shopLevel];
+    const rep      = this.economySystem.reputation;
+    const repMult  = rep >= 5 ? 0.75 : rep >= 4 ? 0.85 : rep >= 3 ? 1.0 : rep >= 2 ? 1.25 : 1.6;
+    const interval = Math.round(base * repMult);
     const spawned: SpawnedCustomer[] = [];
 
     if (now - this.lastSpawnAt >= interval && this.queue.length < MAX_QUEUE_SIZE) {
@@ -43,18 +48,20 @@ export class CustomerSpawnerSystem {
     return spawned;
   }
 
-  spawnCustomer(shopLevel: number): SpawnedCustomer {
-    const type = pickRandomCustomerType();
-    const def = CUSTOMER_DEFS[type];
+  spawnCustomer(shopLevel: 1 | 2 | 3): SpawnedCustomer {
+    const type = pickRandomCustomerType(shopLevel);
+    const def  = CUSTOMER_DEFS[type];
 
-    // Filter available menus by shop level
     const available = def.availableMenus.filter(m => MENU_DEFS[m].unlockLevel <= shopLevel);
-    const order = available[Math.floor(Math.random() * available.length)] ?? 'red_bean';
+    const order     = available[Math.floor(Math.random() * available.length)] ?? 'red_bean';
+    const quantity  = pickQuantity(def, shopLevel);
 
     const c: SpawnedCustomer = {
       id: `c${++this.idCounter}`,
       type,
       order,
+      quantity,
+      quantityServed: 0,
       startedAt: Date.now(),
       def,
     };
@@ -77,10 +84,15 @@ export class CustomerSpawnerSystem {
     return this.getRemainingMs(c) / c.def.patience;
   }
 
+  /** Serve one bread to the customer. Returns the customer, or null if mismatch.
+   *  Customer stays in queue until fully served (quantityServed === quantity). */
   serveCustomer(customerId: string, item: MenuItem): SpawnedCustomer | null {
     const c = this.queue.find(x => x.id === customerId);
     if (!c || c.order !== item) return null;
-    this.removeCustomer(customerId);
+    c.quantityServed++;
+    if (c.quantityServed >= c.quantity) {
+      this.removeCustomer(customerId);
+    }
     return c;
   }
 

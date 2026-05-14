@@ -73,7 +73,7 @@ export class BungeaMold extends Phaser.GameObjects.Container {
         this.onFlip();
         break;
       case MoldState.Done:
-        this.events.emit('request-serve', this);
+        this.events.emit('request-shelf', this);
         break;
       case MoldState.Burnt:
         this.startCleaning();

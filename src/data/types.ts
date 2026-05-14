@@ -35,6 +35,7 @@ export interface DayStats {
   dayNumber: number;
   gold: number;
   shopLevel: number;
+  shelfCapacity?: number;
   stock: Record<string, number>;
   totalSold: number;
   revenue: number;
