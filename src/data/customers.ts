@@ -15,7 +15,7 @@ export const CUSTOMER_DEFS: Record<CustomerType, CustomerDef> = {
   normal: {
     type: 'normal',
     name: '일반 손님',
-    patience: 60_000,
+    patience: 70_000,
     tipRate: 0,
     reputationOnFail: 1,
     color: 0x4ecdc4,
@@ -24,7 +24,7 @@ export const CUSTOMER_DEFS: Record<CustomerType, CustomerDef> = {
   worker: {
     type: 'worker',
     name: '직장인',
-    patience: 30_000,
+    patience: 50_000,
     tipRate: 0,
     reputationOnFail: 1,
     color: 0x45b7d1,
@@ -33,7 +33,7 @@ export const CUSTOMER_DEFS: Record<CustomerType, CustomerDef> = {
   family: {
     type: 'family',
     name: '가족 손님',
-    patience: 90_000,
+    patience: 120_000,
     tipRate: 0.10,
     reputationOnFail: 1,
     color: 0xf7dc6f,

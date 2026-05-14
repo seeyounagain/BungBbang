@@ -38,7 +38,10 @@ export class GameScene extends Phaser.Scene {
   private dayNumber = 1;
   private dayStartMs = 0;
   private dayEnded = false;
-  private selectedMenu: MenuItem = 'red_bean';
+
+  // Filling panel
+  private fillingPanel: Phaser.GameObjects.Container | null = null;
+  private activeFillMold: BungeaMold | null = null;
 
   // Queue display
   private queueSlots: { x: number; y: number }[] = [];
@@ -56,7 +59,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.dayNumber  = 1;
       this.shopLevel  = 1;
-      this.economy    = new EconomySystem(200);
+      this.economy    = new EconomySystem(300);
     }
   }
 
@@ -201,6 +204,10 @@ export class GameScene extends Phaser.Scene {
       this.tryPour(m);
     });
 
+    mold.events.on('waiting-for-filling', (m: BungeaMold) => {
+      this.showFillingPanel(m);
+    });
+
     mold.events.on('request-serve', (m: BungeaMold) => {
       this.tryServe(m);
     });
@@ -219,6 +226,7 @@ export class GameScene extends Phaser.Scene {
       if (state === MoldState.Burnt) {
         this.audio.play('burnt');
         this.economy.wastedCount++;
+        if (this.activeFillMold === mold) this.hideFillingPanel();
       }
     });
 
@@ -228,61 +236,179 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tryPour(mold: BungeaMold): void {
-    const menu = this.selectedMenu;
-    const ingredient: IngredientType = MENU_DEFS[menu].ingredient as IngredientType;
+    mold.startPouring();
+  }
 
-    // Check stock
+  private showFillingPanel(mold: BungeaMold): void {
+    this.hideFillingPanel();
+    this.activeFillMold = mold;
+
+    const panelW  = 118;
+    const itemH   = 48;
+    const items: MenuItem[] = ['red_bean', 'cream_cheese', 'choux'];
+    const panelH  = items.length * itemH + 32;
+
+    const FILLING_ICONS: Record<MenuItem, string> = {
+      red_bean:     'ing-red-bean',
+      cream_cheese: 'ing-cream-cheese',
+      choux:        'ing-choux',
+    };
+
+    // Position panel: right of mold if space, else left
+    let px = mold.x + 50;
+    if (px + panelW > GAME_WIDTH - 8) px = mold.x - panelW - 50;
+    let py = mold.y - panelH / 2;
+    py = Math.max(HUD_HEIGHT + 4, Math.min(py, GAME_HEIGHT - BOTTOM_BAR - panelH - 4));
+
+    const panel = this.add.container(px, py);
+    panel.setDepth(100);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1a1a2e, 0.96);
+    bg.fillRoundedRect(0, 0, panelW, panelH, 10);
+    bg.lineStyle(2, 0x4ecdc4, 0.8);
+    bg.strokeRoundedRect(0, 0, panelW, panelH, 10);
+    panel.add(bg);
+
+    const title = this.add.text(panelW / 2, 10, '소 선택', {
+      fontSize: '11px',
+      fontStyle: 'bold',
+      color: '#4ecdc4',
+    }).setOrigin(0.5, 0);
+    panel.add(title);
+
+    items.forEach((key, i) => {
+      const def        = MENU_DEFS[key];
+      const ingredient = def.ingredient as IngredientType;
+      const stock      = this.economy.stock[ingredient] ?? 0;
+      const locked     = def.unlockLevel > this.shopLevel;
+      const disabled   = locked || stock === 0;
+
+      const iy = 28 + i * itemH;
+      const iw = panelW - 12;
+
+      const rowBg = this.add.graphics();
+      rowBg.fillStyle(disabled ? 0x1e1e30 : 0x2d2d44, 1);
+      rowBg.fillRoundedRect(6, iy, iw, itemH - 4, 6);
+      panel.add(rowBg);
+
+      const icon = this.add.image(22, iy + (itemH - 4) / 2, FILLING_ICONS[key]);
+      icon.setDisplaySize(24, 24);
+      icon.setAlpha(disabled ? 0.25 : 1);
+      panel.add(icon);
+
+      const nameText = this.add.text(40, iy + 7, def.name, {
+        fontSize: '9px',
+        color: disabled ? '#444466' : '#ffffff',
+      });
+      panel.add(nameText);
+
+      const stockLabel = this.add.text(40, iy + 22, locked ? '🔒 잠금' : `${stock}개`, {
+        fontSize: '9px',
+        color: disabled ? '#333355' : '#aaaaaa',
+      });
+      panel.add(stockLabel);
+
+      if (!disabled) {
+        const hitArea = this.add.container(6, iy);
+        hitArea.setSize(iw, itemH - 4);
+        hitArea.setInteractive({ useHandCursor: true });
+        hitArea.on('pointerdown', () => this.selectFilling(mold, key));
+        hitArea.on('pointerover', () => {
+          rowBg.clear();
+          rowBg.fillStyle(0x4ecdc4, 0.25);
+          rowBg.fillRoundedRect(6, iy, iw, itemH - 4, 6);
+        });
+        hitArea.on('pointerout', () => {
+          rowBg.clear();
+          rowBg.fillStyle(0x2d2d44, 1);
+          rowBg.fillRoundedRect(6, iy, iw, itemH - 4, 6);
+        });
+        panel.add(hitArea);
+      }
+    });
+
+    this.fillingPanel = panel;
+  }
+
+  private hideFillingPanel(): void {
+    if (this.fillingPanel) {
+      this.fillingPanel.destroy();
+      this.fillingPanel = null;
+    }
+    this.activeFillMold = null;
+  }
+
+  private selectFilling(mold: BungeaMold, key: MenuItem): void {
+    const ingredient = MENU_DEFS[key].ingredient as IngredientType;
     if (!this.economy.consume(ingredient)) {
       this.showToast('재료가 부족합니다!');
       return;
     }
-
-    if (!mold.startPouring(menu)) {
-      // Refund if can't pour
-      this.economy.stock[ingredient] = (this.economy.stock[ingredient] ?? 0) + 1;
-    }
+    mold.setFilling(key);
+    this.hideFillingPanel();
   }
 
   private tryServe(mold: BungeaMold): void {
     if (!mold.currentMenu || !mold.quality) return;
 
-    // Find matching customer with least patience (most urgent first)
-    const matches = this.spawner.customers.filter(c => c.order === mold.currentMenu);
-    const customer = matches.reduce<typeof matches[0] | undefined>((best, c) => {
-      if (!best) return c;
-      return this.spawner.getRemainingMs(c) < this.spawner.getRemainingMs(best) ? c : best;
-    }, undefined);
-    if (!customer) {
+    const allCustomers = [...this.spawner.customers];
+    if (allCustomers.length === 0) {
       this.showToast('주문 손님이 없습니다');
       return;
     }
 
-    const served = this.spawner.serveCustomer(customer.id, mold.currentMenu);
-    if (!served) return;
+    // Find matching customer (correct order) with least patience
+    const matches = allCustomers.filter(c => c.order === mold.currentMenu);
+    const correctCustomer = matches.reduce<typeof matches[0] | undefined>((best, c) => {
+      if (!best) return c;
+      return this.spawner.getRemainingMs(c) < this.spawner.getRemainingMs(best) ? c : best;
+    }, undefined);
 
-    const earned = this.economy.sell(mold.currentMenu, mold.quality, served.def);
-    mold.startServing();
+    if (correctCustomer) {
+      // ── Happy path: correct filling ──────────────────────────────
+      const served = this.spawner.serveCustomer(correctCustomer.id, mold.currentMenu);
+      if (!served) return;
 
-    // Visual feedback
-    this.effects.showGoldEarned(mold.x, mold.y - 30, earned);
-    this.effects.showHeart(mold.x + 30, mold.y - 20);
-    this.audio.play('customer_happy');
+      const earned = this.economy.sell(mold.currentMenu, mold.quality, served.def);
+      mold.startServing();
 
-    // Remove customer UI
-    const ui = this.customerUIs.get(customer.id);
-    if (ui) {
-      this.tweens.add({
-        targets: ui,
-        alpha: 0,
-        scaleX: 0.5,
-        scaleY: 0.5,
-        duration: 300,
-        onComplete: () => {
-          ui.destroy();
-          this.customerUIs.delete(customer.id);
-        },
-      });
+      this.effects.showGoldEarned(mold.x, mold.y - 30, earned);
+      this.effects.showHeart(mold.x + 30, mold.y - 20);
+      this.audio.play('customer_happy');
+      this.removeCustomerUI(correctCustomer.id, false);
+    } else {
+      // ── Wrong filling: give to most urgent customer, 0원 + penalty ──
+      const mostUrgent = allCustomers.reduce((best, c) =>
+        this.spawner.getRemainingMs(c) < this.spawner.getRemainingMs(best) ? c : best,
+      );
+
+      this.spawner.removeCustomer(mostUrgent.id);
+      this.economy.decreaseReputation(mostUrgent.def.reputationOnFail);
+      mold.forceBurnt();
+
+      this.showToast('잘못된 소! 판매 실패');
+      this.effects.showAngry(mold.x, mold.y - 30);
+      this.audio.play('customer_angry');
+      this.removeCustomerUI(mostUrgent.id, true);
     }
+  }
+
+  private removeCustomerUI(id: string, angry: boolean): void {
+    const ui = this.customerUIs.get(id);
+    if (!ui) return;
+    this.tweens.add({
+      targets: ui,
+      alpha: 0,
+      scaleX: angry ? 1 : 0.5,
+      scaleY: angry ? 1 : 0.5,
+      y: angry ? ui.y - 20 : ui.y,
+      duration: angry ? 400 : 300,
+      onComplete: () => {
+        ui.destroy();
+        this.customerUIs.delete(id);
+      },
+    });
   }
 
   // ─── Customer spawning ───────────────────────────────────────────────────
@@ -354,12 +480,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private wireInputEvents(): void {
-    // Menu selection from UIScene
-    this.events.on('menu-selected', (key: MenuItem) => {
-      this.selectedMenu = key;
-      this.showToast(`${key} 선택됨`);
-    });
-
     // Buy ingredient from UIScene
     this.events.on('buy-ingredient', (type: IngredientType) => {
       if (!this.economy.buyIngredient(type)) {
@@ -422,9 +542,11 @@ export class GameScene extends Phaser.Scene {
     if (this.dayEnded) return;
     this.dayEnded = true;
 
+    this.hideFillingPanel();
+
     // Force burn all active molds
     this.molds.forEach(m => {
-      if ([MoldState.Baking, MoldState.Flipped, MoldState.Pouring].includes(m.state)) {
+      if ([MoldState.Baking, MoldState.Flipped, MoldState.Pouring, MoldState.WaitingForFilling].includes(m.state)) {
         m.forceBurnt();
       }
     });

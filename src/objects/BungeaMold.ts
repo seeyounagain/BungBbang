@@ -3,6 +3,12 @@ import { MoldState, canTransition, type BakingQuality } from '../data/types';
 import { BAKING, POURING_DURATION_MS, CLEANING_DURATION_MS } from '../data/balance';
 import type { MenuItem } from '../data/menu';
 
+const BREAD_TEXTURE: Record<MenuItem, string> = {
+  red_bean:     'bread-redbean',
+  cream_cheese: 'bread-cream',
+  choux:        'bread-custard',
+};
+
 export class BungeaMold extends Phaser.GameObjects.Container {
   state: MoldState = MoldState.Empty;
   progress = 0;
@@ -59,6 +65,9 @@ export class BungeaMold extends Phaser.GameObjects.Container {
       case MoldState.Empty:
         this.events.emit('request-pour', this);
         break;
+      case MoldState.WaitingForFilling:
+        this.events.emit('waiting-for-filling', this);
+        break;
       case MoldState.Baking:
       case MoldState.Flipped:
         this.onFlip();
@@ -72,9 +81,9 @@ export class BungeaMold extends Phaser.GameObjects.Container {
     }
   }
 
-  startPouring(menu: MenuItem): boolean {
+  startPouring(): boolean {
     if (!canTransition(this.state, MoldState.Pouring)) return false;
-    this.currentMenu = menu;
+    this.currentMenu = null;
     this.state = MoldState.Pouring;
     this.progress = 0;
     this.quality = null;
@@ -82,13 +91,20 @@ export class BungeaMold extends Phaser.GameObjects.Container {
     this.events.emit('audio', 'flip');
 
     this.cookTimer = this.scene.time.delayedCall(POURING_DURATION_MS, () => {
-      this.startBaking();
+      this.transitionTo(MoldState.WaitingForFilling);
+      this.events.emit('waiting-for-filling', this);
     });
     return true;
   }
 
+  setFilling(menu: MenuItem): void {
+    if (this.state !== MoldState.WaitingForFilling) return;
+    this.currentMenu = menu;
+    this.startBaking();
+  }
+
   private startBaking(): void {
-    if (!canTransition(this.state, MoldState.Baking)) return;
+    if (this.state !== MoldState.WaitingForFilling && !canTransition(this.state, MoldState.Baking)) return;
     this.state = MoldState.Baking;
     this.progress = 0;
     this.updateVisuals();
@@ -208,7 +224,7 @@ export class BungeaMold extends Phaser.GameObjects.Container {
 
   private updateBakingFrame(): void {
     if (this.state === MoldState.Flipped) {
-      this.stateImage.setTexture('mold-done');
+      this.stateImage.setTexture('bread-half');
       return;
     }
     if (this.state !== MoldState.Baking) return;
@@ -251,21 +267,30 @@ export class BungeaMold extends Phaser.GameObjects.Container {
         this.stateLabel.setText('반죽중...');
         this.stateLabel.setColor('#88ccff');
         break;
+      case MoldState.WaitingForFilling:
+        this.stateImage.setTexture('mold-batter');
+        this.stateLabel.setText('소 선택!');
+        this.stateLabel.setColor('#ff88cc');
+        break;
       case MoldState.Baking:
         this.updateBakingFrame();
         this.stateLabel.setText('뒤집기!');
         this.stateLabel.setColor('#ffee44');
         break;
       case MoldState.Flipped:
-        this.stateImage.setTexture('mold-done');
+        this.stateImage.setTexture('bread-half');
         this.stateLabel.setText('꺼내기!');
         this.stateLabel.setColor('#44ffaa');
         break;
-      case MoldState.Done:
-        this.stateImage.setTexture(this.quality === 'PERFECT' ? 'mold-perfect' : 'mold-done');
+      case MoldState.Done: {
+        const breadTex = this.quality === 'PERFECT'
+          ? 'bread-sparkle'
+          : (this.currentMenu ? BREAD_TEXTURE[this.currentMenu] : 'bread-done');
+        this.stateImage.setTexture(breadTex);
         this.stateLabel.setText('납품!');
         this.stateLabel.setColor('#ffdd00');
         break;
+      }
       case MoldState.Burnt:
         this.stateImage.setTexture('mold-burnt');
         this.stateLabel.setText('탄빵\n치우기');

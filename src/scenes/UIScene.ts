@@ -1,14 +1,6 @@
 import Phaser from 'phaser';
 import type { GameScene } from './GameScene';
-import { UPGRADES } from '../data/balance';
 import { INGREDIENT_DEFS, type IngredientType } from '../data/ingredients';
-import { MENU_DEFS, type MenuItem } from '../data/menu';
-
-const MENU_FISH_FRAME: Record<MenuItem, string> = {
-  red_bean:     'fish-red-bean',
-  cream_cheese: 'fish-cream-cheese',
-  choux:        'fish-choux',
-};
 
 const INGREDIENT_FRAME: Record<IngredientType, string> = {
   flour:        'ing-flour',
@@ -24,11 +16,9 @@ export class UIScene extends Phaser.Scene {
   private dayText!: Phaser.GameObjects.Text;
   private reputationStars!: Phaser.GameObjects.Text;
   private bottomPanel!: Phaser.GameObjects.Container;
-  private menuPanel!: Phaser.GameObjects.Container;
   private shopPanel!: Phaser.GameObjects.Container;
   private closeZone!: Phaser.GameObjects.Zone;
-  private activePanel: 'menu' | 'shop' | null = null;
-  private menuButtons: Map<MenuItem, Phaser.GameObjects.Container> = new Map();
+  private activePanel: 'shop' | null = null;
 
   constructor() {
     super({ key: 'UIScene' });
@@ -38,7 +28,6 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.buildHUD(width);
     this.buildBottomBar(width, height);
-    this.buildMenuPanel(width, height);
     this.buildShopPanel(width, height);
     this.subscribeToGameEvents();
   }
@@ -95,10 +84,9 @@ export class UIScene extends Phaser.Scene {
     bg.lineStyle(2, 0x4ecdc4, 0.3);
     bg.lineBetween(0, 0, width, 0);
 
-    const menuBtn = this.createTabButton(width / 4, 28, '🐟 메뉴', () => this.togglePanel('menu'));
-    const shopBtn = this.createTabButton((width / 4) * 3, 28, '🏪 상점', () => this.togglePanel('shop'));
+    const shopBtn = this.createTabButton(width / 2, 28, '🏪 상점', () => this.togglePanel('shop'));
 
-    this.bottomPanel.add([bg, menuBtn, shopBtn]);
+    this.bottomPanel.add([bg, shopBtn]);
   }
 
   private createTabButton(
@@ -136,78 +124,13 @@ export class UIScene extends Phaser.Scene {
     return container;
   }
 
-  private buildMenuPanel(width: number, height: number): void {
-    this.menuPanel = this.add.container(0, height - 56 - 160);
-    this.menuPanel.setVisible(false);
-    this.menuPanel.setDepth(10);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0x2d2d44, 0.97);
-    bg.fillRoundedRect(8, 0, width - 16, 155, 12);
-    bg.lineStyle(1, 0x4ecdc4, 0.4);
-    bg.strokeRoundedRect(8, 0, width - 16, 155, 12);
-
-    this.menuPanel.add(bg);
-
-    const menuKeys: MenuItem[] = ['red_bean', 'cream_cheese', 'choux'];
-    menuKeys.forEach((key, i) => {
-      const btn = this.buildMenuButton(key, 30 + i * 120, 75);
-      this.menuButtons.set(key, btn);
-      this.menuPanel.add(btn);
-    });
-
+  private buildShopPanel(width: number, height: number): void {
     // Close tap outside — disabled by default, enabled only when a panel is open
     this.closeZone = this.add.zone(0, 0, width, height).setOrigin(0).setDepth(9);
     this.closeZone.setInteractive();
     this.closeZone.disableInteractive();
     this.closeZone.on('pointerdown', () => this.hideAllPanels());
-  }
 
-  private buildMenuButton(key: MenuItem, x: number, y: number): Phaser.GameObjects.Container {
-    const def = MENU_DEFS[key];
-    const container = this.add.container(x, y);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0x3d3d5c, 1);
-    bg.fillRoundedRect(-48, -55, 96, 110, 8);
-
-    const icon = this.add.image(0, -22, MENU_FISH_FRAME[key]);
-    icon.setDisplaySize(44, 44);
-
-    const nameText = this.add.text(0, 8, def.name, {
-      fontSize: '9px',
-      color: '#ffffff',
-      wordWrap: { width: 86 },
-      align: 'center',
-    }).setOrigin(0.5, 0);
-
-    const priceText = this.add.text(0, 28, `${def.price}G`, {
-      fontSize: '12px',
-      fontStyle: 'bold',
-      color: '#ffdd00',
-    }).setOrigin(0.5, 0);
-
-    const lockText = this.add.text(0, 0, '🔒', {
-      fontSize: '20px',
-    }).setOrigin(0.5).setVisible(false);
-
-    container.add([bg, icon, nameText, priceText, lockText]);
-    container.setSize(96, 110);
-    container.setInteractive({ useHandCursor: true });
-
-    container.setData('key', key);
-    container.setData('lockText', lockText);
-    container.setData('bg', bg);
-
-    container.on('pointerdown', () => {
-      const gameScene = this.scene.get('GameScene') as GameScene;
-      gameScene.events.emit('menu-selected', key);
-    });
-
-    return container;
-  }
-
-  private buildShopPanel(width: number, height: number): void {
     this.shopPanel = this.add.container(0, height - 56 - 220);
     this.shopPanel.setVisible(false);
     this.shopPanel.setDepth(10);
@@ -282,21 +205,19 @@ export class UIScene extends Phaser.Scene {
     return row;
   }
 
-  private togglePanel(panel: 'menu' | 'shop'): void {
+  private togglePanel(panel: 'shop'): void {
     if (this.activePanel === panel) {
       this.hideAllPanels();
       return;
     }
     this.hideAllPanels();
     this.activePanel = panel;
-    if (panel === 'menu') this.menuPanel.setVisible(true);
-    if (panel === 'shop') this.shopPanel.setVisible(true);
+    this.shopPanel.setVisible(true);
     this.closeZone.setInteractive();
   }
 
   private hideAllPanels(): void {
     this.activePanel = null;
-    this.menuPanel.setVisible(false);
     this.shopPanel.setVisible(false);
     this.closeZone.disableInteractive();
   }
@@ -333,10 +254,6 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('stock-changed', (type: IngredientType, amount: number) => {
       this.updateStockDisplay(type, amount);
     });
-
-    gameScene.events.on('shop-level-changed', (level: number) => {
-      this.updateMenuButtonsByLevel(level);
-    });
   }
 
   updateTimerBar(ratio: number): void {
@@ -358,21 +275,4 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  updateMenuButtonsByLevel(level: number): void {
-    this.menuButtons.forEach((btn, key) => {
-      const def = MENU_DEFS[key];
-      const locked = def.unlockLevel > level;
-      const lockText = btn.getData('lockText') as Phaser.GameObjects.Text;
-      const bg = btn.getData('bg') as Phaser.GameObjects.Graphics;
-      lockText.setVisible(locked);
-      bg.clear();
-      bg.fillStyle(locked ? 0x222233 : 0x3d3d5c, 1);
-      bg.fillRoundedRect(-48, -55, 96, 110, 8);
-      if (locked) {
-        btn.disableInteractive();
-      } else {
-        btn.setInteractive({ useHandCursor: true });
-      }
-    });
-  }
 }

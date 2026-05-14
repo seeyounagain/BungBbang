@@ -1,5 +1,5 @@
 export const BAKING = {
-  totalDuration: 30_000,
+  totalDuration: 12_000,
   flippedDoneAt: 0.75,
   flipZones: {
     under:      { min: 0.00, max: 0.70 } as const,
@@ -21,14 +21,14 @@ export const DAY = { durationMs: 5 * 60 * 1_000 };
 
 export const UPGRADES = [
   { level: 1, name: '노점',      cost:     0, slots: 4 },
-  { level: 2, name: '작은 가게', cost:   500, slots: 6 },
-  { level: 3, name: '동네 맛집', cost: 1_500, slots: 8 },
+  { level: 2, name: '작은 가게', cost: 2_500, slots: 6 },
+  { level: 3, name: '동네 맛집', cost: 8_000, slots: 8 },
 ] as const;
 
 export const SPAWN_INTERVAL_MS: Record<1 | 2 | 3, number> = {
   1: 15_000,
-  2: 12_000,
-  3: 10_000,
+  2: 10_000,
+  3:  8_000,
 };
 
 export const MAX_QUEUE_SIZE = 5;

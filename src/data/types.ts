@@ -1,23 +1,25 @@
 export enum MoldState {
-  Empty    = 'empty',
-  Pouring  = 'pouring',
-  Baking   = 'baking',
-  Flipped  = 'flipped',
-  Done     = 'done',
-  Serving  = 'serving',
-  Burnt    = 'burnt',
-  Cleaning = 'cleaning',
+  Empty             = 'empty',
+  Pouring           = 'pouring',
+  WaitingForFilling = 'waiting_for_filling',
+  Baking            = 'baking',
+  Flipped           = 'flipped',
+  Done              = 'done',
+  Serving           = 'serving',
+  Burnt             = 'burnt',
+  Cleaning          = 'cleaning',
 }
 
 export const MOLD_TRANSITIONS: Record<MoldState, MoldState[]> = {
-  [MoldState.Empty]:    [MoldState.Pouring],
-  [MoldState.Pouring]:  [MoldState.Baking],
-  [MoldState.Baking]:   [MoldState.Flipped, MoldState.Burnt],
-  [MoldState.Flipped]:  [MoldState.Done, MoldState.Burnt],
-  [MoldState.Done]:     [MoldState.Serving],
-  [MoldState.Serving]:  [MoldState.Empty],
-  [MoldState.Burnt]:    [MoldState.Cleaning],
-  [MoldState.Cleaning]: [MoldState.Empty],
+  [MoldState.Empty]:             [MoldState.Pouring],
+  [MoldState.Pouring]:           [MoldState.WaitingForFilling],
+  [MoldState.WaitingForFilling]: [MoldState.Baking, MoldState.Burnt],
+  [MoldState.Baking]:            [MoldState.Flipped, MoldState.Burnt],
+  [MoldState.Flipped]:           [MoldState.Done, MoldState.Burnt],
+  [MoldState.Done]:              [MoldState.Serving],
+  [MoldState.Serving]:           [MoldState.Empty],
+  [MoldState.Burnt]:             [MoldState.Cleaning],
+  [MoldState.Cleaning]:          [MoldState.Empty],
 };
 
 export function canTransition(from: MoldState, to: MoldState): boolean {

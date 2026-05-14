@@ -45,16 +45,23 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private loadAssets(): void {
-    // Mold states (place your PNG files in public/assets/)
+    // Mold states
     this.load.image('mold-empty',    'assets/mold-empty.png');
     this.load.image('mold-pouring',  'assets/mold-pouring.png');
     this.load.image('mold-batter',   'assets/mold-batter.png');
     this.load.image('mold-baking1',  'assets/mold-baking1.png');
     this.load.image('mold-baking2',  'assets/mold-baking2.png');
-    this.load.image('mold-done',     'assets/mold-done.png');
-    this.load.image('mold-perfect',  'assets/mold-perfect.png');
     this.load.image('mold-burnt',    'assets/mold-burnt.png');
     this.load.image('mold-cleaning', 'assets/mold-cleaning.png');
+
+    // Baked bread — per filling type
+    this.load.image('bread-redbean',  'assets/bread_redbean.png');
+    this.load.image('bread-cream',    'assets/bread_cream.png');
+    this.load.image('bread-custard',  'assets/bread_custard.png');
+    this.load.image('bread-sparkle',  'assets/bread_sparkle.png');
+    this.load.image('bread-half',     'assets/bread_half.png');
+    this.load.image('bread-burnt',    'assets/bread_burnt.png');
+    this.load.image('bread-done',     'assets/bread_done.png');
 
     // Menu fish icons
     this.load.image('fish-red-bean',     'assets/fish-red-bean.png');
@@ -91,10 +98,15 @@ export class PreloadScene extends Phaser.Scene {
       ['mold-batter',   96, 96, 0xccbb55],
       ['mold-baking1',  96, 96, 0xcc8833],
       ['mold-baking2',  96, 96, 0xbb6622],
-      ['mold-done',     96, 96, 0xD4A017],
-      ['mold-perfect',  96, 96, 0xFFCC00],
       ['mold-burnt',    96, 96, 0x222222],
       ['mold-cleaning', 96, 96, 0x778899],
+      ['bread-redbean', 96, 96, 0x993333],
+      ['bread-cream',   96, 96, 0xfffacc],
+      ['bread-custard', 96, 96, 0xf8c471],
+      ['bread-sparkle', 96, 96, 0xffee00],
+      ['bread-half',    96, 96, 0xD4A017],
+      ['bread-burnt',   96, 96, 0x111111],
+      ['bread-done',    96, 96, 0xD4A017],
       ['fish-red-bean',     64, 64, 0xD4A017],
       ['fish-cream-cheese', 64, 64, 0xF5DEB3],
       ['fish-choux',        64, 64, 0xF8C471],
