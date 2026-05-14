@@ -75,7 +75,6 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('cust-vip',    'assets/cust-vip.png');
 
     // Ingredient icons
-    this.load.image('ing-flour',        'assets/ing-flour.png');
     this.load.image('ing-red-bean',     'assets/ing-red-bean.png');
     this.load.image('ing-cream-cheese', 'assets/ing-cream-cheese.png');
     this.load.image('ing-choux',        'assets/ing-choux.png');
@@ -114,7 +113,6 @@ export class PreloadScene extends Phaser.Scene {
       ['cust-worker', 64, 96, 0x45b7d1],
       ['cust-family', 96, 96, 0xf7dc6f],
       ['cust-vip',    64, 96, 0xf39c12],
-      ['ing-flour',        48, 48, 0xf5f5e0],
       ['ing-red-bean',     48, 48, 0x993333],
       ['ing-cream-cheese', 48, 48, 0xffffcc],
       ['ing-choux',        48, 48, 0xffdd88],

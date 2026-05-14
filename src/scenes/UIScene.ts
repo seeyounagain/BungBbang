@@ -3,7 +3,6 @@ import type { GameScene } from './GameScene';
 import { INGREDIENT_DEFS, type IngredientType } from '../data/ingredients';
 
 const INGREDIENT_FRAME: Record<IngredientType, string> = {
-  flour:        'ing-flour',
   red_bean:     'ing-red-bean',
   cream_cheese: 'ing-cream-cheese',
   choux:        'ing-choux',
@@ -149,7 +148,7 @@ export class UIScene extends Phaser.Scene {
 
     this.shopPanel.add([bg, title]);
 
-    const ingredients: IngredientType[] = ['flour', 'red_bean', 'cream_cheese', 'choux'];
+    const ingredients: IngredientType[] = ['red_bean', 'cream_cheese', 'choux'];
     ingredients.forEach((type, i) => {
       const row = this.buildIngredientRow(type, i, width);
       this.shopPanel.add(row);

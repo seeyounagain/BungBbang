@@ -129,16 +129,11 @@ export class BungeaMold extends Phaser.GameObjects.Container {
 
   onFlip(): BakingQuality | null {
     if (this.state === MoldState.Flipped) {
-      const isBurnt = this.progress >= BAKING.flippedDoneAt;
-      if (isBurnt) {
-        this.autoBurnt();
-        return 'BURNT';
-      } else {
-        this.transitionTo(MoldState.Done);
-        this.stopProgressTween();
-        this.events.emit('state-changed', this, MoldState.Done);
-        return this.quality;
-      }
+      // Always transition to Done on second tap — auto-burn handles progress=1.0
+      this.transitionTo(MoldState.Done);
+      this.stopProgressTween();
+      this.events.emit('state-changed', this, MoldState.Done);
+      return this.quality;
     }
 
     if (!canTransition(this.state, MoldState.Flipped)) return null;

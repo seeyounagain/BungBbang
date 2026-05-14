@@ -21,7 +21,6 @@ export class EconomySystem {
     this.gold = gold;
     this.reputation = 5;
     this.stock = {
-      flour:        stock?.flour        ?? 50,
       red_bean:     stock?.red_bean     ?? 40,
       cream_cheese: stock?.cream_cheese ?? 0,
       choux:        stock?.choux        ?? 0,

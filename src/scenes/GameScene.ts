@@ -243,10 +243,10 @@ export class GameScene extends Phaser.Scene {
     this.hideFillingPanel();
     this.activeFillMold = mold;
 
-    const panelW  = 118;
-    const itemH   = 48;
+    const panelW = 118;
+    const itemH  = 48;
     const items: MenuItem[] = ['red_bean', 'cream_cheese', 'choux'];
-    const panelH  = items.length * itemH + 32;
+    const panelH = items.length * itemH + 32;
 
     const FILLING_ICONS: Record<MenuItem, string> = {
       red_bean:     'ing-red-bean',
@@ -254,7 +254,7 @@ export class GameScene extends Phaser.Scene {
       choux:        'ing-choux',
     };
 
-    // Position panel: right of mold if space, else left
+    // Position: right of mold if space, else left
     let px = mold.x + 50;
     if (px + panelW > GAME_WIDTH - 8) px = mold.x - panelW - 50;
     let py = mold.y - panelH / 2;
@@ -277,6 +277,8 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5, 0);
     panel.add(title);
 
+    const rowBgs: Phaser.GameObjects.Graphics[] = [];
+
     items.forEach((key, i) => {
       const def        = MENU_DEFS[key];
       const ingredient = def.ingredient as IngredientType;
@@ -290,6 +292,7 @@ export class GameScene extends Phaser.Scene {
       const rowBg = this.add.graphics();
       rowBg.fillStyle(disabled ? 0x1e1e30 : 0x2d2d44, 1);
       rowBg.fillRoundedRect(6, iy, iw, itemH - 4, 6);
+      rowBgs.push(rowBg);
       panel.add(rowBg);
 
       const icon = this.add.image(22, iy + (itemH - 4) / 2, FILLING_ICONS[key]);
@@ -297,35 +300,53 @@ export class GameScene extends Phaser.Scene {
       icon.setAlpha(disabled ? 0.25 : 1);
       panel.add(icon);
 
-      const nameText = this.add.text(40, iy + 7, def.name, {
+      panel.add(this.add.text(40, iy + 7, def.name, {
         fontSize: '9px',
         color: disabled ? '#444466' : '#ffffff',
-      });
-      panel.add(nameText);
-
-      const stockLabel = this.add.text(40, iy + 22, locked ? '🔒 잠금' : `${stock}개`, {
+      }));
+      panel.add(this.add.text(40, iy + 22, locked ? '🔒 잠금' : `${stock}개`, {
         fontSize: '9px',
         color: disabled ? '#333355' : '#aaaaaa',
-      });
-      panel.add(stockLabel);
+      }));
+    });
 
-      if (!disabled) {
-        const hitArea = this.add.container(6, iy);
-        hitArea.setSize(iw, itemH - 4);
-        hitArea.setInteractive({ useHandCursor: true });
-        hitArea.on('pointerdown', () => this.selectFilling(mold, key));
-        hitArea.on('pointerover', () => {
-          rowBg.clear();
-          rowBg.fillStyle(0x4ecdc4, 0.25);
-          rowBg.fillRoundedRect(6, iy, iw, itemH - 4, 6);
-        });
-        hitArea.on('pointerout', () => {
-          rowBg.clear();
-          rowBg.fillStyle(0x2d2d44, 1);
-          rowBg.fillRoundedRect(6, iy, iw, itemH - 4, 6);
-        });
-        panel.add(hitArea);
-      }
+    // Single interactive zone on the whole panel — no nested container issues
+    panel.setSize(panelW, panelH);
+    panel.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, panelW, panelH),
+      Phaser.Geom.Rectangle.Contains,
+    );
+
+    panel.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      const localY = pointer.y - py;
+      items.forEach((key, i) => {
+        const def      = MENU_DEFS[key];
+        const stock    = this.economy.stock[def.ingredient as IngredientType] ?? 0;
+        const locked   = def.unlockLevel > this.shopLevel;
+        const disabled = locked || stock === 0;
+        const iy       = 28 + i * itemH;
+        const iw       = panelW - 12;
+        rowBgs[i].clear();
+        const hover = !disabled && localY >= iy && localY < iy + itemH - 4;
+        rowBgs[i].fillStyle(hover ? 0x4ecdc4 : (disabled ? 0x1e1e30 : 0x2d2d44), hover ? 0.3 : 1);
+        rowBgs[i].fillRoundedRect(6, iy, iw, itemH - 4, 6);
+      });
+    });
+
+    panel.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      const localX = pointer.x - px;
+      const localY = pointer.y - py;
+      const iw     = panelW - 12;
+      items.forEach((key, i) => {
+        const def      = MENU_DEFS[key];
+        const stock    = this.economy.stock[def.ingredient as IngredientType] ?? 0;
+        const locked   = def.unlockLevel > this.shopLevel;
+        if (locked || stock === 0) return;
+        const iy = 28 + i * itemH;
+        if (localX >= 6 && localX <= 6 + iw && localY >= iy && localY < iy + itemH - 4) {
+          this.selectFilling(mold, key);
+        }
+      });
     });
 
     this.fillingPanel = panel;
@@ -397,6 +418,7 @@ export class GameScene extends Phaser.Scene {
   private removeCustomerUI(id: string, angry: boolean): void {
     const ui = this.customerUIs.get(id);
     if (!ui) return;
+    this.customerUIs.delete(id); // remove immediately so updateCustomerSpawning skips it
     this.tweens.add({
       targets: ui,
       alpha: 0,
@@ -404,10 +426,7 @@ export class GameScene extends Phaser.Scene {
       scaleY: angry ? 1 : 0.5,
       y: angry ? ui.y - 20 : ui.y,
       duration: angry ? 400 : 300,
-      onComplete: () => {
-        ui.destroy();
-        this.customerUIs.delete(id);
-      },
+      onComplete: () => ui.destroy(),
     });
   }
 
