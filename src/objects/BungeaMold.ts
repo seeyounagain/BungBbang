@@ -69,7 +69,6 @@ export class BungeaMold extends Phaser.GameObjects.Container {
         this.events.emit('waiting-for-filling', this);
         break;
       case MoldState.Baking:
-      case MoldState.Flipped:
         this.onFlip();
         break;
       case MoldState.Done:
@@ -120,22 +119,11 @@ export class BungeaMold extends Phaser.GameObjects.Container {
         if (this.progress >= 1.0 && this.state === MoldState.Baking) {
           this.autoBurnt();
         }
-        if (this.progress >= 1.0 && this.state === MoldState.Flipped) {
-          this.autoBurnt();
-        }
       },
     });
   }
 
   onFlip(): BakingQuality | null {
-    if (this.state === MoldState.Flipped) {
-      // Always transition to Done on second tap — auto-burn handles progress=1.0
-      this.transitionTo(MoldState.Done);
-      this.stopProgressTween();
-      this.events.emit('state-changed', this, MoldState.Done);
-      return this.quality;
-    }
-
     if (!canTransition(this.state, MoldState.Flipped)) return null;
 
     const p = this.progress;
@@ -149,8 +137,11 @@ export class BungeaMold extends Phaser.GameObjects.Container {
     else                                                     quality = 'BURNT';
 
     this.quality = quality;
-    this.transitionTo(MoldState.Flipped);
+    this.stopProgressTween();
+    // Skip Flipped state — go directly to Done in one tap
+    this.transitionTo(MoldState.Done);
     this.events.emit('flipped', this, quality);
+    this.events.emit('state-changed', this, MoldState.Done);
     this.events.emit('audio', 'flip');
     if (quality === 'PERFECT') this.events.emit('audio', 'perfect');
     return quality;
