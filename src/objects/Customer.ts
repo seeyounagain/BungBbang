@@ -75,17 +75,19 @@ export class CustomerUI extends Phaser.GameObjects.Container {
     const orderIcon = scene.add.image(17, 16, MENU_FISH_FRAME[cd.order]);
     orderIcon.setDisplaySize(26, 26);
 
-    this.quantityText = scene.add.text(32, 32, cd.quantity > 1 ? `×${cd.quantity}` : '', {
-      fontSize: '9px',
+    this.orderBubble.add([bubbleBg, orderIcon]);
+
+    // Quantity badge — positioned at top-right corner of the bubble
+    // bubble is at (-28, -58), bubble size 34×34 → badge at (6, -64)
+    this.quantityText = scene.add.text(6, -64, `×${cd.quantity}`, {
+      fontSize: '11px',
       fontStyle: 'bold',
-      color: '#ff6644',
-      stroke: '#000000',
-      strokeThickness: 2,
-    }).setOrigin(1, 1);
+      color: '#ffffff',
+      backgroundColor: '#e74c3c',
+      padding: { x: 3, y: 1 },
+    }).setOrigin(0.5, 1).setVisible(cd.quantity > 1);
 
-    this.orderBubble.add([bubbleBg, orderIcon, this.quantityText]);
-
-    this.add([this.avatarImg, this.expressionLabel, this.patienceBarBg, this.patienceBarFill, nameLabel, this.orderBubble]);
+    this.add([this.avatarImg, this.expressionLabel, this.patienceBarBg, this.patienceBarFill, nameLabel, this.orderBubble, this.quantityText]);
 
     if (cd.type === 'vip') {
       this.patienceBarBg.setVisible(false);
@@ -118,6 +120,11 @@ export class CustomerUI extends Phaser.GameObjects.Container {
   }
 
   updateQuantity(remaining: number): void {
-    this.quantityText.setText(remaining > 1 ? `×${remaining}` : '');
+    if (remaining > 1) {
+      this.quantityText.setText(`×${remaining}`);
+      this.quantityText.setVisible(true);
+    } else {
+      this.quantityText.setVisible(false);
+    }
   }
 }
